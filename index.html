@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 智能建单 — FoodMax SCM</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:  #0F172A;
+  --blue:  #0369A1;
+  --blt:   #EFF6FF;
+  --bmd:   #DBEAFE;
+  --green: #059669;
+  --glt:   #DCFCE7;
+  --amber: #D97706;
+  --alt:   #FFFBEB;
+  --red:   #DC2626;
+  --rlt:   #FEF2F2;
+  --bg:    #F1F5F9;
+  --surf:  #FFFFFF;
+  --bdr:   #E2E8F0;
+  --t1:    #0F172A;
+  --t2:    #475569;
+  --t3:    #94A3B8;
+  --mut:   #F8FAFC;
+  --r:     6px;
+  --r2:    10px;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Topbar ── */
+.topbar {
+  height: 48px;
+  background: var(--navy);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 0;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.logo {
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  letter-spacing: -.2px;
+  margin-right: 6px;
+}
+.logo-dot { width: 6px; height: 6px; border-radius: 50%; background: #38BDF8; display: inline-block; margin-right: 8px; vertical-align: middle; }
+.bc-wrap { display: flex; align-items: center; gap: 0; }
+.bc { color: #64748B; font-size: 12.5px; cursor: pointer; padding: 4px 6px; border-radius: 4px; transition: color .15s; }
+.bc:hover { color: #94A3B8; }
+.bc-sep { color: #334155; font-size: 12px; }
+.bc-cur { color: #CBD5E1; font-size: 12.5px; padding: 0 6px; font-weight: 500; }
+.tbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.tbar-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748B; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #0369A1, #0284C7); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+
+/* ── Subnav ── */
+.subnav {
+  height: 38px;
+  background: var(--surf);
+  border-bottom: 1px solid var(--bdr);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 2px;
+}
+.snav {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 12.5px;
+  color: var(--t2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  top: 1px;
+  transition: color .15s;
+  font-weight: 500;
+}
+.snav:hover { color: var(--navy); }
+.snav.on { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* ── Page ── */
+.page {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 22px 20px 80px;
+}
+
+/* ── Page Header ── */
+.pg-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.pg-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--blue), #0284C7);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(3,105,161,.3);
+}
+.pg-icon svg { color: #fff; }
+.pg-title { font-size: 16px; font-weight: 700; color: var(--navy); line-height: 1.3; }
+.pg-sub { font-size: 12px; color: var(--t3); margin-top: 2px; }
+.switch-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--t2);
+  cursor: pointer;
+  padding: 6px 12px;
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+  background: var(--surf);
+  transition: all .15s;
+  font-family: inherit;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.switch-btn:hover { border-color: #94A3B8; color: var(--t1); background: var(--mut); }
+
+/* ── Phases ── */
+.phase { display: none; }
+.phase.on { display: block; }
+
+/* ══════════════════════════
+   PHASE 1 — INPUT
+══════════════════════════ */
+.input-wrap { max-width: 680px; margin: 0 auto; }
+
+.input-card {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+
+/* Method tabs */
+.mtabs {
+  display: flex;
+  border-bottom: 1px solid var(--bdr);
+  padding: 0 20px;
+  background: var(--mut);
+}
+.mtab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--t2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: inherit;
+  transition: color .15s;
+}
+.mtab svg { width: 13px; height: 13px; flex-shrink: 0; }
+.mtab:hover { color: var(--navy); }
+.mtab.on { color: var(--blue); border-bottom-color: var(--blue); background: none; }
+
+/* Input body */
+.input-body { padding: 20px; }
+
+/* Textarea */
+.main-ta {
+  width: 100%;
+  min-height: 130px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--bdr);
+  border-radius: 8px;
+  background: var(--surf);
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--t1);
+  resize: vertical;
+  outline: none;
+  line-height: 1.75;
+  transition: border-color .15s, box-shadow .15s;
+  margin-bottom: 14px;
+}
+.main-ta:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(3,105,161,.1); }
+.main-ta::placeholder { color: var(--t3); font-size: 13px; }
+
+/* Quick chips */
+.chips-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.chips-label { font-size: 11.5px; color: var(--t3); white-space: nowrap; }
+.chip {
+  padding: 4px 11px;
+  border: 1px solid var(--bdr);
+  border-radius: 20px;
+  font-size: 11.5px;
+  color: var(--t2);
+  cursor: pointer;
+  background: var(--surf);
+  transition: all .15s;
+  font-family: inherit;
+  font-weight: 500;
+}
+.chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blt); }
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed #CBD5E1;
+  border-radius: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--mut);
+  margin-bottom: 16px;
+}
+.upload-zone:hover { border-color: var(--blue); background: var(--blt); }
+.uz-icon {
+  width: 44px;
+  height: 44px;
+  background: #E2E8F0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+.upload-zone:hover .uz-icon { background: var(--bmd); }
+.uz-title { font-size: 13.5px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+.uz-sub { font-size: 11.5px; color: var(--t3); }
+.uz-formats {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.uz-fmt {
+  padding: 3px 10px;
+  background: #fff;
+  border: 1px solid var(--bdr);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--t2);
+  font-weight: 500;
+}
+
+/* History list */
+.hist-search {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+  font-family: inherit;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+  outline: none;
+  background: var(--surf);
+  color: var(--t1);
+}
+.hist-search:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(3,105,161,.1); }
+.hist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--bdr);
+  border-radius: 8px;
+  margin-bottom: 7px;
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--surf);
+}
+.hist-item:hover { border-color: var(--blue); background: var(--blt); }
+.hist-item:hover .hist-no { color: var(--blue); }
+.hi-left { flex: 1; min-width: 0; }
+.hist-no { font-size: 12.5px; font-weight: 600; color: var(--navy); display: flex; align-items: center; gap: 7px; }
+.hist-desc { font-size: 11.5px; color: var(--t2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hi-right { text-align: right; flex-shrink: 0; }
+.hist-date { font-size: 11px; color: var(--t3); }
+.hist-amt { font-size: 13px; font-weight: 700; color: var(--navy); margin-top: 1px; }
+.badge { font-size: 10.5px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.bdg-ok { background: var(--glt); color: #15803D; }
+.bdg-ing { background: var(--bmd); color: #1D4ED8; }
+
+/* Input footer */
+.input-foot {
+  display: flex;
+  align-items: center;
+  padding-top: 4px;
+  margin-top: 2px;
+}
+.sec-tip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--t3);
+  margin-right: auto;
+}
+
+/* ══════════════════════════
+   PHASE 2 — PARSING
+══════════════════════════ */
+.parse-wrap {
+  max-width: 440px;
+  margin: 72px auto;
+  text-align: center;
+}
+.spin-ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid var(--bmd);
+  border-top-color: var(--blue);
+  animation: spin 0.9s linear infinite;
+  margin: 0 auto 20px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.parse-title { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 5px; }
+.parse-sub { font-size: 12.5px; color: var(--t2); margin-bottom: 22px; }
+.pbar { height: 3px; background: #E2E8F0; border-radius: 2px; overflow: hidden; margin-bottom: 24px; }
+.pfill { height: 100%; background: linear-gradient(90deg, var(--blue), #38BDF8); border-radius: 2px; animation: pf 2.8s ease forwards; }
+@keyframes pf { 0%{width:2%} 30%{width:38%} 65%{width:70%} 90%{width:88%} 100%{width:92%} }
+
+.psteps { display: flex; flex-direction: column; gap: 9px; text-align: left; }
+.pstep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--t3);
+  opacity: 0;
+  animation: fadein .2s ease forwards;
+}
+@keyframes fadein { to { opacity: 1; } }
+.pstep.done { color: var(--t2); }
+.pstep.curr { color: var(--blue); font-weight: 500; }
+.pdot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pstep.done .pdot { background: var(--glt); }
+.pstep.curr .pdot { background: var(--bmd); animation: pulse .8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+
+/* ══════════════════════════
+   PHASE 3 — REVIEW
+══════════════════════════ */
+
+/* Result bar */
+.result-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--surf);
+  border: 1px solid #BBD8F0;
+  border-left: 3px solid var(--green);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+}
+.rb-ok { display: flex; align-items: center; gap: 5px; color: var(--green); font-weight: 600; }
+.rb-detail { color: var(--t2); }
+.rb-warn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--amber);
+  font-weight: 500;
+  margin-left: auto;
+  font-size: 12px;
+  padding: 3px 10px;
+  background: var(--alt);
+  border-radius: 4px;
+}
+.rb-reset {
+  background: none;
+  border: none;
+  font-size: 11.5px;
+  color: var(--t3);
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  margin-left: 8px;
+  padding: 0;
+}
+.rb-reset:hover { color: var(--t2); }
+
+/* Card */
+.card {
+  background: var(--surf);
+  border: 1px solid var(--bdr);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.card-head {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--bdr);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--mut);
+  border-radius: 10px 10px 0 0;
+}
+.card-title { font-size: 12.5px; font-weight: 600; color: var(--navy); }
+.card-body { padding: 18px; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 20px; }
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fg.s2 { grid-column: span 2; }
+.fg.s3 { grid-column: span 3; }
+
+.lbl {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--t2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.req { color: #EF4444; font-size: 12px; }
+
+/* AI markers */
+.ai-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  background: var(--blue);
+  color: #fff;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+.ai-tag.warn { background: var(--amber); }
+
+/* Form controls */
+.fc {
+  height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid var(--bdr);
+  border-radius: var(--r);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--t1);
+  background: var(--surf);
+  width: 100%;
+  transition: border-color .15s, background .2s;
+  appearance: none;
+}
+.fc:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(3,105,161,.1); }
+.fc[readonly],
+.fc[disabled] { background: #F8FAFC; color: var(--t3); cursor: not-allowed; border-color: var(--bdr); }
+.fc.af { border-color: #93C5FD; background: #EFF6FF; }
+.fc.aw { border-color: #FCD34D; background: #FFFBEB; }
+.fc.fc-ta { height: auto; padding: 8px 10px; min-height: 52px; resize: vertical; line-height: 1.6; }
+select.fc {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394A3B8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  padding-right: 26px;
+  cursor: pointer;
+}
+select.fc[disabled] { opacity: 1; }
+
+.field-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--amber);
+  margin-top: 3px;
+}
+
+.radio-row { display: flex; gap: 18px; align-items: center; height: 32px; }
+.radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--t1);
+}
+.radio-row input[type="radio"] { accent-color: var(--blue); width: 13px; height: 13px; cursor: pointer; }
+
+/* ── Table ── */
+.tbl-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 960px;
+}
+thead th {
+  padding: 8px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--t2);
+  background: var(--mut);
+  border-bottom: 1px solid var(--bdr);
+  white-space: nowrap;
+  text-align: left;
+  position: sticky;
+  top: 0;
+}
+thead th:first-child { border-radius: 0; }
+tbody td {
+  padding: 7px 9px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #FAFCFE; }
+tbody tr.pkg-row { background: #FFFBEB; }
+tbody tr.pkg-row:hover { background: #FEF3C7; }
+
+/* Table inputs */
+.tdi {
+  height: 27px;
+  padding: 0 7px;
+  border: 1.5px solid var(--bdr);
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--t1);
+  background: var(--surf);
+  width: 100%;
+}
+.tdi:focus { outline: none; border-color: var(--blue); background: var(--blt); }
+.tdi[readonly] { background: var(--mut); color: var(--t3); border-color: transparent; cursor: default; }
+.tds {
+  height: 27px;
+  padding: 0 4px;
+  border: 1.5px solid var(--bdr);
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--t1);
+  background: var(--surf);
+  min-width: 72px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%2394A3B8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 18px;
+}
+.tdi.af { border-color: #93C5FD; background: #EFF6FF; }
+.tdi.aw { border-color: #FCD34D; background: #FFFBEB; }
+.tds.af { border-color: #93C5FD; background: #EFF6FF; }
+.tcell-warn { font-size: 10.5px; color: var(--amber); margin-top: 3px; display: flex; align-items: center; gap: 3px; }
+.spu-code { font-size: 11.5px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+
+/* Table action buttons */
+.tbl-head-btns { margin-left: auto; display: flex; gap: 6px; }
+
+/* Table footer */
+.tbl-foot {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--bdr);
+  background: var(--mut);
+}
+.tbl-stats { margin-left: auto; display: flex; gap: 20px; font-size: 12px; color: var(--t2); }
+.tbl-stats strong { color: var(--navy); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.del-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--t3);
+  font-size: 14px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition: all .15s;
+  line-height: 1;
+}
+.del-btn:hover { color: var(--red); background: var(--rlt); }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
+  height: 32px;
+  border-radius: var(--r);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-ghost { background: var(--surf); color: var(--t2); border-color: var(--bdr); }
+.btn-ghost:hover { background: var(--mut); color: var(--t1); border-color: #CBD5E1; }
+.btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn-primary:hover { background: #025b8a; border-color: #025b8a; }
+.btn-sm { height: 28px; padding: 0 11px; font-size: 11.5px; }
+.btn-lg {
+  height: 40px;
+  padding: 0 24px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+.add-dashed {
+  height: 27px;
+  padding: 0 11px;
+  border: 1.5px dashed #CBD5E1;
+  background: none;
+  border-radius: var(--r);
+  font-size: 12px;
+  color: var(--t2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .15s;
+  font-family: inherit;
+  font-weight: 500;
+}
+.add-dashed:hover { border-color: var(--blue); color: var(--blue); background: var(--blt); }
+
+/* ── Footer ── */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--surf);
+  border-top: 1px solid var(--bdr);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 10px;
+  z-index: 100;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.07);
+}
+.foot-meta { font-size: 12px; color: var(--t3); }
+.foot-meta strong { color: var(--t2); font-weight: 500; }
+.foot-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: var(--navy);
+  color: #fff;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s, transform .18s;
+  z-index: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Field separator (section divider) ── */
+.form-sep {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--bdr);
+  margin: 2px 0;
+}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<nav class="topbar">
+  <span class="logo"><span class="logo-dot"></span>FoodMax SCM</span>
+  <div class="bc-wrap">
+    <span class="bc-sep">/</span>
+    <span class="bc" onclick="toast('跳转采购管理')">采购管理</span>
+    <span class="bc-sep">/</span>
+    <span class="bc" onclick="toast('跳转采购单列表')">采购单</span>
+    <span class="bc-sep">/</span>
+    <span class="bc-cur">AI 智能建单</span>
+  </div>
+  <div class="tbar-right">
+    <span class="tbar-badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      SG 区域
+    </span>
+    <div class="avatar">李</div>
+  </div>
+</nav>
+
+<!-- Subnav -->
+<div class="subnav">
+  <div class="snav">采购计划</div>
+  <div class="snav on">采购单</div>
+  <div class="snav">供应商管理</div>
+  <div class="snav">价格管理</div>
+</div>
+
+<!-- Page -->
+<div class="page">
+
+  <!-- Page header -->
+  <div class="pg-head">
+    <div class="pg-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div>
+      <div class="pg-title">AI 智能建单</div>
+      <div class="pg-sub">描述采购需求，AI 自动解析并生成可编辑草稿 · 建单时间从 15 分钟降至 3 分钟</div>
+    </div>
+    <button class="switch-btn" onclick="switchManual()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      切换手动建单
+    </button>
+  </div>
+
+  <!-- ═══ PHASE 1: INPUT ═══ -->
+  <div class="phase on" id="s1">
+    <div class="input-wrap">
+      <div class="input-card">
+
+        <!-- Method tabs -->
+        <div class="mtabs">
+          <button class="mtab on" id="mt-text" onclick="setMethod('text')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            文字描述
+          </button>
+          <button class="mtab" id="mt-file" onclick="setMethod('file')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            上传报价单
+          </button>
+          <button class="mtab" id="mt-hist" onclick="setMethod('hist')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            引用历史单
+          </button>
+        </div>
+
+        <div class="input-body">
+
+          <!-- Text input -->
+          <div id="area-text">
+            <textarea class="main-ta" id="mainTA"
+              placeholder="用自然语言描述采购需求，例如：
+
+从 BIG SAILING INTERNATIONAL 采购：
+- 挪威三文鱼 500kg，单价 $12.5/kg
+- 北极甜虾 300kg，单价 $8.2/kg
+- 银鳕鱼 200kg，单价 $18/kg
+
+送新加坡 KR 仓，流水计付款，正常采购"></textarea>
+            <div class="chips-row">
+              <span class="chips-label">快速开始：</span>
+              <button class="chip" onclick="fillEg(1)">日常生鲜补货</button>
+              <button class="chip" onclick="fillEg(2)">大宗海鲜采购</button>
+              <button class="chip" onclick="fillEg(3)">紧急补货单</button>
+            </div>
+          </div>
+
+          <!-- File upload -->
+          <div id="area-file" style="display:none">
+            <div class="upload-zone" onclick="document.getElementById('fileIn').click()">
+              <div class="uz-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div class="uz-title">点击或拖拽文件到此处</div>
+              <div class="uz-sub">AI 自动识别商品、数量、单价信息</div>
+              <div class="uz-formats">
+                <span class="uz-fmt">Excel .xlsx</span>
+                <span class="uz-fmt">CSV .csv</span>
+                <span class="uz-fmt">图片 .jpg .png</span>
+                <span class="uz-fmt">PDF 扫描件</span>
+              </div>
+              <input type="file" id="fileIn" style="display:none" accept=".xlsx,.xls,.csv,.jpg,.png,.pdf" onchange="handleFile(this)">
+            </div>
+            <div class="chips-row" style="justify-content:center">
+              <span class="chips-label">单文件 ≤ 20MB · 支持供应商报价单、采购计划表</span>
+            </div>
+          </div>
+
+          <!-- History -->
+          <div id="area-hist" style="display:none">
+            <input class="hist-search" placeholder="搜索采购单编号或供应商名称…" oninput="filterHist(this.value)">
+            <div id="hist-list">
+              <div class="hist-item" onclick="pickHist('PO-20260405-0238','BIG SAILING INTERNATIONAL · 新加坡 KR 仓 · 三文鱼/北极甜虾/银鳕鱼')">
+                <div class="hi-left">
+                  <div class="hist-no">PO-20260405-0238 <span class="badge bdg-ok">已完结</span></div>
+                  <div class="hist-desc">BIG SAILING INTERNATIONAL · KR 仓 · 三文鱼、北极甜虾、银鳕鱼</div>
+                </div>
+                <div class="hi-right">
+                  <div class="hist-date">2026-04-05</div>
+                  <div class="hist-amt">$11,240.00</div>
+                </div>
+              </div>
+              <div class="hist-item" onclick="pickHist('PO-20260401-0201','BIG SAILING INTERNATIONAL · 新加坡 KR 仓 · 三文鱼/北极甜虾')">
+                <div class="hi-left">
+                  <div class="hist-no">PO-20260401-0201 <span class="badge bdg-ing">审批中</span></div>
+                  <div class="hist-desc">BIG SAILING INTERNATIONAL · KR 仓 · 三文鱼、北极甜虾</div>
+                </div>
+                <div class="hi-right">
+                  <div class="hist-date">2026-04-01</div>
+                  <div class="hist-amt">$8,200.00</div>
+                </div>
+              </div>
+              <div class="hist-item" onclick="pickHist('PO-20260328-0185','OCEAN FRESH CO. · 新加坡 SG2 仓 · 带鱼/黄鱼/扇贝/墨鱼')">
+                <div class="hi-left">
+                  <div class="hist-no">PO-20260328-0185 <span class="badge bdg-ok">已完结</span></div>
+                  <div class="hist-desc">OCEAN FRESH CO. · SG2 仓 · 带鱼、黄鱼、扇贝、墨鱼</div>
+                </div>
+                <div class="hi-right">
+                  <div class="hist-date">2026-03-28</div>
+                  <div class="hist-amt">$15,800.00</div>
+                </div>
+              </div>
+              <div class="hist-item" onclick="pickHist('PO-20260322-0162','BIG SAILING INTERNATIONAL · 新加坡 KR 仓 · 三文鱼/银鳕鱼')">
+                <div class="hi-left">
+                  <div class="hist-no">PO-20260322-0162 <span class="badge bdg-ok">已完结</span></div>
+                  <div class="hist-desc">BIG SAILING INTERNATIONAL · KR 仓 · 三文鱼、银鳕鱼</div>
+                </div>
+                <div class="hi-right">
+                  <div class="hist-date">2026-03-22</div>
+                  <div class="hist-amt">$13,100.00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer row -->
+          <div class="input-foot">
+            <span class="sec-tip">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              内容仅用于生成采购单草稿，不会外传
+            </span>
+            <button class="btn btn-primary btn-lg" onclick="startParse()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              开始解析
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 2: PARSING ═══ -->
+  <div class="phase" id="s2">
+    <div class="parse-wrap">
+      <div class="spin-ring"></div>
+      <div class="parse-title">AI 正在解析采购需求…</div>
+      <div class="parse-sub">识别实体信息 · 匹配系统主数据 · 检索历史价格</div>
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <div class="psteps" id="psteps"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PHASE 3: REVIEW ═══ -->
+  <div class="phase" id="s3">
+
+    <!-- Result summary bar -->
+    <div class="result-bar">
+      <div class="rb-ok">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        解析完成
+      </div>
+      <span class="rb-detail">· 已预填 13 个字段、3 条商品明细，综合置信度 94%</span>
+      <div class="rb-warn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        2 项需确认
+      </div>
+      <button class="rb-reset" onclick="backToInput()">重新输入</button>
+    </div>
+
+    <!-- 基本信息 -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span class="card-title">基本信息</span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+
+          <!-- Row 1 -->
+          <div class="fg">
+            <label class="lbl">采购单编号：</label>
+            <input class="fc" readonly value="采购单创建后自动生成" title="系统自动分配">
+          </div>
+          <div class="fg">
+            <label class="lbl">采购员：<span class="req">*</span></label>
+            <input class="fc" disabled value="李明辉" title="当前登录用户">
+          </div>
+          <div class="fg">
+            <label class="lbl">采购单类型：<span class="req">*</span> <span class="ai-tag">AI</span></label>
+            <select class="fc af">
+              <option value="1" selected>正常采购单</option>
+              <option value="2">紧急采购单</option>
+              <option value="3">直送采购单</option>
+            </select>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="fg">
+            <label class="lbl">供应商：<span class="req">*</span> <span class="ai-tag">AI</span></label>
+            <input class="fc af" value="BIG SAILING INTERNATIONAL PTE. LTD." title="已匹配系统供应商">
+          </div>
+          <div class="fg">
+            <label class="lbl">入库仓库：<span class="req">*</span> <span class="ai-tag">AI</span></label>
+            <select class="fc af">
+              <option>新加坡 KR 仓</option>
+              <option>新加坡 SG2 仓</option>
+              <option>香港 HK 仓</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="lbl">结算主体：<span class="req">*</span> <span class="ai-tag">AI</span></label>
+            <select class="fc af">
+              <option value="" disabled>请选择</option>
+              <option selected>FoodMax SG Pte. Ltd.</option>
+              <option>FoodMax HK Ltd.</option>
+            </select>
+          </div>
+
+          <div class="form-sep"></div>
+
+          <!-- Row 3: 支付方式 + conditionals + 定价方式 -->
+          <div class="fg">
+            <label class="lbl">支付方式：<span class="req">*</span> <span class="ai-tag warn">推测</span></label>
+            <select class="fc aw" id="payType" onchange="onPayTypeChange(this)">
+              <option value="">请选择</option>
+              <option value="1">月结</option>
+              <option value="2" selected>流水计</option>
+              <option value="3">预付款</option>
+              <option value="4">银行转账</option>
+              <option value="5">备用金</option>
+            </select>
+            <div class="field-hint">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+              由历史订单推测，请核实后确认
+            </div>
+          </div>
+          <!-- 备用金领用人（paymentType = 5） -->
+          <div class="fg" id="pettyCashRow" style="display:none">
+            <label class="lbl">备用金领用人：<span class="req">*</span></label>
+            <input class="fc" placeholder="请输入领用人姓名">
+          </div>
+          <!-- 卡号（paymentType = 4） -->
+          <div class="fg" id="cardNoRow" style="display:none">
+            <label class="lbl">卡号：<span class="req">*</span></label>
+            <input class="fc" placeholder="请输入银行卡号">
+          </div>
+          <!-- 定价方式 -->
+          <div class="fg">
+            <label class="lbl">定价方式：<span class="req">*</span> <span class="ai-tag">AI</span></label>
+            <select class="fc af">
+              <option value="">请选择</option>
+              <option value="1" selected>含税</option>
+              <option value="2">未税</option>
+            </select>
+          </div>
+
+          <div class="form-sep"></div>
+
+          <!-- Row 4 -->
+          <div class="fg">
+            <label class="lbl">期望到货时间：<span class="req">*</span></label>
+            <input class="fc" type="datetime-local" value="2026-04-12T10:00">
+          </div>
+          <div class="fg">
+            <label class="lbl">是否均摊物流费：<span class="req">*</span></label>
+            <div class="radio-row">
+              <label><input type="radio" name="shipAvg" value="1"> 是</label>
+              <label><input type="radio" name="shipAvg" value="0" checked> 否</label>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="lbl">是否预付单：<span class="req">*</span></label>
+            <div class="radio-row">
+              <label><input type="radio" name="isPrepay" value="1"> 是</label>
+              <label><input type="radio" name="isPrepay" value="0" checked> 否</label>
+            </div>
+          </div>
+
+          <!-- Row 5: Remark full width -->
+          <div class="fg s3">
+            <label class="lbl">采购单备注：</label>
+            <textarea class="fc fc-ta" placeholder="请输入备注（最多 2000 字）" maxlength="2000"></textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 采购明细 -->
+    <div class="card">
+      <div class="card-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span class="card-title">采购明细</span>
+        <div class="tbl-head-btns">
+          <button class="btn btn-ghost btn-sm" onclick="addOnePack()">
+            新增包装物
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="addOneProduct()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新增商品
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('打开批量新增商品弹窗')">
+            批量新增商品
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('导出采购商品 Excel')">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            导出采购商品
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="toast('打开导入采购商品')">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            导入采购商品
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:28px">#</th>
+              <th>采购类型</th>
+              <th style="min-width:100px">商品编码</th>
+              <th style="min-width:160px">商品名称</th>
+              <th style="width:70px">超收比例</th>
+              <th>销售类型</th>
+              <th>商品分类</th>
+              <th style="width:100px">成本均价(含税)</th>
+              <th style="width:100px">采购单价(含税)</th>
+              <th style="width:80px">采购数量</th>
+              <th style="width:110px">采购金额(含税)</th>
+              <th style="width:90px">选择箱规</th>
+              <th style="min-width:90px">商品备注</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="items">
+            <!-- Row 1 -->
+            <tr>
+              <td style="color:var(--t3);text-align:center;font-size:11px">1</td>
+              <td><select class="tds af"><option>正常采购</option><option>紧急采购</option></select></td>
+              <td><div class="spu-code">SPU-10291</div></td>
+              <td><input class="tdi af" value="挪威三文鱼（整条）"></td>
+              <td><input class="tdi af" value="3%" style="width:54px"></td>
+              <td><select class="tds af"><option selected>标品</option><option>非标品</option></select></td>
+              <td><input class="tdi" value="生鲜·海鲜" readonly></td>
+              <td><input class="tdi" value="$11.80" readonly style="text-align:right"></td>
+              <td><input class="tdi af" value="12.50" oninput="calcRow(this)" style="text-align:right"></td>
+              <td><input class="tdi af" value="500" oninput="calcRow(this)" style="text-align:right"></td>
+              <td><input class="tdi" value="$6,250.00" readonly style="text-align:right;font-weight:600"></td>
+              <td><select class="tds"><option>20kg/箱</option><option>25kg/箱</option></select></td>
+              <td><input class="tdi" placeholder="备注"></td>
+              <td><button class="del-btn" onclick="rmRow(this)" title="删除">✕</button></td>
+            </tr>
+            <!-- Row 2 -->
+            <tr>
+              <td style="color:var(--t3);text-align:center;font-size:11px">2</td>
+              <td><select class="tds af"><option>正常采购</option><option>紧急采购</option></select></td>
+              <td><div class="spu-code">SPU-10445</div></td>
+              <td><input class="tdi af" value="北极甜虾（冻品）"></td>
+              <td><input class="tdi af" value="2%" style="width:54px"></td>
+              <td><select class="tds af"><option selected>标品</option><option>非标品</option></select></td>
+              <td><input class="tdi" value="生鲜·海鲜" readonly></td>
+              <td><input class="tdi" value="$7.90" readonly style="text-align:right"></td>
+              <td><input class="tdi af" value="8.20" oninput="calcRow(this)" style="text-align:right"></td>
+              <td><input class="tdi af" value="300" oninput="calcRow(this)" style="text-align:right"></td>
+              <td><input class="tdi" value="$2,460.00" readonly style="text-align:right;font-weight:600"></td>
+              <td><select class="tds"><option>20kg/箱</option><option>25kg/箱</option></select></td>
+              <td><input class="tdi" placeholder="备注"></td>
+              <td><button class="del-btn" onclick="rmRow(this)" title="删除">✕</button></td>
+            </tr>
+            <!-- Row 3 — price warning -->
+            <tr>
+              <td style="color:var(--t3);text-align:center;font-size:11px">3</td>
+              <td><select class="tds af"><option>正常采购</option><option>紧急采购</option></select></td>
+              <td><div class="spu-code">SPU-10318</div></td>
+              <td><input class="tdi af" value="阿拉斯加银鳕鱼"></td>
+              <td><input class="tdi af" value="2%" style="width:54px"></td>
+              <td><select class="tds af"><option selected>标品</option><option>非标品</option></select></td>
+              <td><input class="tdi" value="生鲜·海鲜" readonly></td>
+              <td><input class="tdi" value="$15.20" readonly style="text-align:right"></td>
+              <td>
+                <input class="tdi aw" value="18.00" oninput="calcRow(this)" style="text-align:right">
+                <div class="tcell-warn">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                  高于均价 18.4%
+                </div>
+              </td>
+              <td><input class="tdi af" value="200" oninput="calcRow(this)" style="text-align:right"></td>
+              <td><input class="tdi" value="$3,600.00" readonly style="text-align:right;font-weight:600"></td>
+              <td><select class="tds"><option>20kg/箱</option><option>25kg/箱</option></select></td>
+              <td><input class="tdi" placeholder="备注"></td>
+              <td><button class="del-btn" onclick="rmRow(this)" title="删除">✕</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Table footer: add btn + stats -->
+      <div class="tbl-foot">
+        <button class="add-dashed" onclick="addOneProduct()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新增商品
+        </button>
+        <button class="add-dashed" onclick="addOnePack()" style="margin-left:6px">新增包装物</button>
+        <div class="tbl-stats">
+          <span>含税商品金额：<strong id="amtTax">$12,310.00</strong></span>
+          <span>未税商品金额：<strong id="amtNotax">$10,884.96</strong></span>
+          <span>包装物金额：<strong id="amtPkg">$0.00</strong></span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /s3 -->
+
+</div><!-- /page -->
+
+<!-- Footer bar -->
+<div class="footer">
+  <span class="foot-meta" id="footMeta">步骤 <strong>1 / 2</strong> — 输入采购需求</span>
+  <div class="foot-actions" id="footActs">
+    <button class="btn btn-ghost" onclick="switchManual()">切换手动建单</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toastEl">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ─── Method tabs ───────────────────────────────────────────
+let curMethod = 'text';
+
+function setMethod(m) {
+  curMethod = m;
+  ['text', 'file', 'hist'].forEach(id => {
+    document.getElementById('mt-' + id).classList.toggle('on', id === m);
+    document.getElementById('area-' + id).style.display = id === m ? 'block' : 'none';
+  });
+}
+
+// ─── Quick fill examples ────────────────────────────────────
+const EXAMPLES = {
+  1: `从 BIG SAILING INTERNATIONAL 采购日常生鲜：
+- 挪威三文鱼 500kg，单价 $12.5/kg
+- 北极甜虾 300kg，单价 $8.2/kg
+
+送新加坡 KR 仓，流水计付款，正常采购`,
+
+  2: `大宗海鲜采购：
+供应商：OCEAN PRIME PTE. LTD.
+入库仓库：香港 HK 仓
+商品：
+- 帝王蟹 200kg，$45/kg
+- 龙虾尾 150kg，$38/kg
+- 带子 100kg，$22/kg
+
+月结付款，正常采购单`,
+
+  3: `紧急补货！三文鱼 200kg，明天到货，KR 仓
+供应商：BIG SAILING INTERNATIONAL
+价格参照上次合同，流水计`
+};
+
+function fillEg(n) {
+  setMethod('text');
+  document.getElementById('mainTA').value = EXAMPLES[n];
+  document.getElementById('mainTA').focus();
+}
+
+// ─── History pick ────────────────────────────────────────────
+function pickHist(no, desc) {
+  setMethod('text');
+  document.getElementById('mainTA').value =
+    `引用历史单 ${no}\n${desc}\n\n商品明细同原单，数量按近 7 天销量建议调整`;
+  toast('已载入历史单：' + no);
+}
+
+function filterHist(q) {
+  const rows = document.querySelectorAll('#hist-list .hist-item');
+  rows.forEach(r => {
+    const text = r.textContent.toLowerCase();
+    r.style.display = !q || text.includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ─── File upload ─────────────────────────────────────────────
+function handleFile(input) {
+  if (input.files?.[0]) {
+    setMethod('text');
+    document.getElementById('mainTA').value =
+      `[已上传文件：${input.files[0].name}]\n请解析文件中的商品、数量和单价信息`;
+    toast('文件已载入：' + input.files[0].name);
+  }
+}
+
+// ─── Phase control ───────────────────────────────────────────
+function showPhase(id) {
+  ['s1', 's2', 's3'].forEach(p =>
+    document.getElementById(p).classList.toggle('on', p === id)
+  );
+}
+
+// ─── Parse animation ─────────────────────────────────────────
+const PARSE_STEPS = [
+  '识别供应商与仓库实体…',
+  '模糊匹配系统商品主数据…',
+  '检索近 30 天历史价格及均价…',
+  '检验价格异常与库存预警…',
+  '生成采购单草稿…'
+];
+
+function startParse() {
+  const ta = document.getElementById('mainTA');
+  if (curMethod === 'text' && !ta.value.trim()) {
+    ta.style.borderColor = 'var(--red)';
+    ta.style.boxShadow = '0 0 0 3px rgba(220,38,38,.12)';
+    ta.focus();
+    setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 1800);
+    return;
+  }
+
+  showPhase('s2');
+  document.getElementById('footMeta').innerHTML = 'AI 解析中，请稍候…';
+  document.getElementById('footActs').innerHTML = '';
+
+  const el = document.getElementById('psteps');
+  el.innerHTML = '';
+
+  PARSE_STEPS.forEach((s, i) => {
+    setTimeout(() => {
+      // Mark previous as done
+      if (i > 0 && el.children[i - 1]) {
+        const prev = el.children[i - 1];
+        prev.className = 'pstep done';
+        prev.querySelector('.pdot').innerHTML =
+          `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`;
+      }
+      const d = document.createElement('div');
+      d.className = 'pstep curr';
+      d.style.animationDelay = '0s';
+      d.innerHTML = `<div class="pdot">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg></div>${s}`;
+      el.appendChild(d);
+    }, i * 520);
+  });
+
+  const total = PARSE_STEPS.length * 520 + 200;
+  setTimeout(() => {
+    [...el.children].forEach(c => {
+      c.className = 'pstep done';
+      c.querySelector('.pdot').innerHTML =
+        `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`;
+    });
+    setTimeout(() => {
+      showPhase('s3');
+      document.getElementById('footMeta').innerHTML = '步骤 <strong>2 / 2</strong> — 核对并编辑草稿';
+      document.getElementById('footActs').innerHTML = `
+        <button class="btn btn-ghost" onclick="saveDraft()">存为草稿</button>
+        <button class="btn btn-primary" onclick="submitOrder()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          保存并提交
+        </button>`;
+    }, 300);
+  }, total);
+}
+
+function backToInput() {
+  showPhase('s1');
+  document.getElementById('footMeta').innerHTML = '步骤 <strong>1 / 2</strong> — 输入采购需求';
+  document.getElementById('footActs').innerHTML =
+    `<button class="btn btn-ghost" onclick="switchManual()">切换手动建单</button>`;
+}
+
+// ─── Conditional fields ──────────────────────────────────────
+function onPayTypeChange(sel) {
+  const v = String(sel.value);
+  document.getElementById('pettyCashRow').style.display = v === '5' ? '' : 'none';
+  document.getElementById('cardNoRow').style.display   = v === '4' ? '' : 'none';
+}
+
+// ─── Table: row calc ─────────────────────────────────────────
+function calcRow(el) {
+  const row = el.closest('tr');
+  const inputs = row.querySelectorAll('input[oninput]');
+  if (inputs.length >= 2) {
+    const price = parseFloat(inputs[0].value) || 0;
+    const qty   = parseFloat(inputs[1].value) || 0;
+    const amtEl = [...row.querySelectorAll('.tdi[readonly]')].pop();
+    if (amtEl) {
+      const amt = price * qty;
+      amtEl.value = '$' + amt.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+  }
+  calcStats();
+}
+
+function calcStats() {
+  let taxTotal = 0;
+  document.querySelectorAll('#items tr:not(.pkg-row)').forEach(r => {
+    const inputs = r.querySelectorAll('input[oninput]');
+    if (inputs.length >= 2) {
+      taxTotal += (parseFloat(inputs[0].value) || 0) * (parseFloat(inputs[1].value) || 0);
+    }
+  });
+  const fmtNum = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const taxEl = document.getElementById('amtTax');
+  const ntEl  = document.getElementById('amtNotax');
+  if (taxEl) taxEl.textContent = fmtNum(taxTotal);
+  if (ntEl)  ntEl.textContent  = fmtNum(taxTotal / 1.13); // approximate excl-tax
+}
+
+// ─── Table: add / remove rows ────────────────────────────────
+function addOneProduct() {
+  const tbody = document.getElementById('items');
+  const n = tbody.rows.length + 1;
+  tbody.insertAdjacentHTML('beforeend', `
+    <tr>
+      <td style="color:var(--t3);text-align:center;font-size:11px">${n}</td>
+      <td><select class="tds"><option>正常采购</option><option>紧急采购</option></select></td>
+      <td><input class="tdi" placeholder="搜索商品编码" style="min-width:88px"></td>
+      <td><input class="tdi" placeholder="商品名称"></td>
+      <td><input class="tdi" value="0%" style="width:54px"></td>
+      <td><select class="tds"><option>标品</option><option>非标品</option></select></td>
+      <td><input class="tdi" readonly placeholder="自动带出"></td>
+      <td><input class="tdi" readonly placeholder="$0.00" style="text-align:right"></td>
+      <td><input class="tdi" placeholder="0.00" oninput="calcRow(this)" style="text-align:right"></td>
+      <td><input class="tdi" placeholder="0" oninput="calcRow(this)" style="text-align:right"></td>
+      <td><input class="tdi" readonly placeholder="$0.00" style="text-align:right;font-weight:600"></td>
+      <td><select class="tds"><option>—</option><option>20kg/箱</option><option>25kg/箱</option></select></td>
+      <td><input class="tdi" placeholder="备注"></td>
+      <td><button class="del-btn" onclick="rmRow(this)" title="删除">✕</button></td>
+    </tr>`);
+}
+
+function addOnePack() {
+  const tbody = document.getElementById('items');
+  const n = tbody.rows.length + 1;
+  tbody.insertAdjacentHTML('beforeend', `
+    <tr class="pkg-row">
+      <td style="color:var(--t3);text-align:center;font-size:11px">${n}</td>
+      <td><select class="tds"><option>包装物</option></select></td>
+      <td><input class="tdi" placeholder="包装物编码" style="min-width:88px"></td>
+      <td><input class="tdi" placeholder="包装物名称"></td>
+      <td><input class="tdi" value="—" readonly style="width:54px;text-align:center"></td>
+      <td><input class="tdi" value="—" readonly></td>
+      <td><input class="tdi" readonly placeholder="自动带出"></td>
+      <td><input class="tdi" readonly placeholder="$0.00" style="text-align:right"></td>
+      <td><input class="tdi" placeholder="0.00" oninput="calcRow(this)" style="text-align:right"></td>
+      <td><input class="tdi" placeholder="0" oninput="calcRow(this)" style="text-align:right"></td>
+      <td><input class="tdi" readonly placeholder="$0.00" style="text-align:right;font-weight:600"></td>
+      <td><select class="tds"><option>—</option></select></td>
+      <td><input class="tdi" placeholder="备注"></td>
+      <td><button class="del-btn" onclick="rmRow(this)" title="删除">✕</button></td>
+    </tr>`);
+}
+
+function rmRow(btn) {
+  btn.closest('tr').remove();
+  // Re-number
+  document.querySelectorAll('#items tr').forEach((r, i) => {
+    r.cells[0].textContent = i + 1;
+  });
+  calcStats();
+}
+
+// ─── Actions ─────────────────────────────────────────────────
+function saveDraft()    { toast('草稿已保存'); }
+function submitOrder()  { toast('采购单已提交，等待审批'); }
+function switchManual() { toast('跳转至手动建单页面…'); }
+
+// ─── Toast ───────────────────────────────────────────────────
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toastEl');
+  document.getElementById('toastMsg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>
