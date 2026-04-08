@@ -1345,7 +1345,7 @@ table { border-collapse: collapse; width: 100%; }
               <circle cx="8" cy="8" r="6" stroke="#CBD5E1" stroke-width="1.5"/>
             </svg>
           </div>
-          <span class="step-text">读取输入内容…</span>
+          <span class="step-text">预处理输入（文本 / OCR / 结构化转换）…</span>
         </div>
         <div class="parse-step pending" role="listitem" id="pstep1">
           <div class="step-icon" id="pstep1-icon">
@@ -1353,7 +1353,7 @@ table { border-collapse: collapse; width: 100%; }
               <circle cx="8" cy="8" r="6" stroke="#CBD5E1" stroke-width="1.5"/>
             </svg>
           </div>
-          <span class="step-text">识别供应商与仓库…</span>
+          <span class="step-text">LLM 实体抽取（供应商 / 仓库 / 商品 / 数量 / 价格…）</span>
         </div>
         <div class="parse-step pending" role="listitem" id="pstep2">
           <div class="step-icon" id="pstep2-icon">
@@ -1361,7 +1361,7 @@ table { border-collapse: collapse; width: 100%; }
               <circle cx="8" cy="8" r="6" stroke="#CBD5E1" stroke-width="1.5"/>
             </svg>
           </div>
-          <span class="step-text">匹配商品主数据…</span>
+          <span class="step-text">主数据模糊匹配（供应商 / 仓库 / 商品编码 / 箱规…）</span>
         </div>
         <div class="parse-step pending" role="listitem" id="pstep3">
           <div class="step-icon" id="pstep3-icon">
@@ -1369,7 +1369,7 @@ table { border-collapse: collapse; width: 100%; }
               <circle cx="8" cy="8" r="6" stroke="#CBD5E1" stroke-width="1.5"/>
             </svg>
           </div>
-          <span class="step-text">检索历史价格区间…</span>
+          <span class="step-text">历史数据补全（支付方式 / 物流费均摊…）</span>
         </div>
         <div class="parse-step pending" role="listitem" id="pstep4">
           <div class="step-icon" id="pstep4-icon">
@@ -1377,7 +1377,15 @@ table { border-collapse: collapse; width: 100%; }
               <circle cx="8" cy="8" r="6" stroke="#CBD5E1" stroke-width="1.5"/>
             </svg>
           </div>
-          <span class="step-text">生成采购草稿…</span>
+          <span class="step-text">校验供应商 / 仓库 / 商品关系 &amp; 价格合理性…</span>
+        </div>
+        <div class="parse-step pending" role="listitem" id="pstep5">
+          <div class="step-icon" id="pstep5-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6" stroke="#CBD5E1" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <span class="step-text">生成采购草稿 &amp; 计算汇总金额…</span>
         </div>
       </div>
 
@@ -1775,7 +1783,7 @@ const SVG_DONE    = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"
 const SVG_ERROR   = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#DC2626"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 
 function resetParseSteps() {
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     const step = document.getElementById('pstep' + i);
     const icon = document.getElementById('pstep' + i + '-icon');
     step.className = 'parse-step pending';
@@ -1807,10 +1815,11 @@ function startParse() {
 
   if (parseTimer) clearTimeout(parseTimer);
 
+  const STEP_DELAYS = [500, 700, 900, 600, 800, 500]; // ms per step
   let delay = 0;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     const idx = i;
-    delay += 520;
+    delay += STEP_DELAYS[i];
     setTimeout(() => {
       // Activate current step
       const step = document.getElementById('pstep' + idx);
@@ -1830,7 +1839,7 @@ function startParse() {
         setTimeout(() => {
           step.className = 'parse-step done';
           icon.innerHTML = SVG_DONE;
-          if (idx === 4) {
+          if (idx === 5) {
             // All done → go to phase 3
             setTimeout(() => {
               buildPhase3();
