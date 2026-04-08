@@ -403,13 +403,16 @@ body {
 /* ══ Confirm Modal ══ */
 .modal-ov { position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .modal-ov.on { opacity: 1; pointer-events: all; }
-.modal-dlg { background: var(--surf); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.22); width: 560px; max-width: 96vw; max-height: 86vh; overflow-y: auto; animation: modal-in .2s ease; }
+.modal-dlg { background: var(--surf); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.22); width: 560px; max-width: 96vw; max-height: 86vh; overflow-y: auto; animation: modal-in .22s cubic-bezier(0,0,0.2,1); }
 @keyframes modal-in { from{transform:scale(.95) translateY(8px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+.modal-ov { transition: opacity .14s cubic-bezier(0.4,0,1,1); } /* ease-in exit */
+.modal-ov.on { transition: opacity .22s cubic-bezier(0,0,0.2,1); } /* ease-out enter */
 .modal-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px 14px; border-bottom: 1px solid var(--bdr); }
 .modal-head-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--blt); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .modal-title { font-size: 14px; font-weight: 700; color: var(--navy); }
-.modal-cls { margin-left: auto; width: 26px; height: 26px; border: none; background: none; cursor: pointer; color: var(--t3); border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.modal-cls { margin-left: auto; width: 40px; height: 40px; border: none; background: none; cursor: pointer; color: var(--t3); border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: background .15s; flex-shrink: 0; }
 .modal-cls:hover { background: var(--mut); color: var(--t1); }
+.modal-cls:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .modal-body { padding: 16px 20px; }
 .modal-sec { margin-bottom: 16px; }
 .modal-sec-title { font-size: 10.5px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 9px; }
@@ -763,6 +766,23 @@ tbody tr.pkg-row:hover { background: #FEF3C7; }
   background: var(--bdr);
   margin: 2px 0;
 }
+
+/* ── Global focus rings (keyboard nav) ── */
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .spin-ring { animation: none; border-color: var(--blue); }
+  .pfill { animation: none; width: 88%; }
+  .modal-dlg { animation: none; }
+  .modal-ov, .modal-ov.on { transition: none; }
+}
 </style>
 </head>
 <body>
@@ -958,7 +978,7 @@ tbody tr.pkg-row:hover { background: #FEF3C7; }
       <div class="psteps" id="psteps"></div>
 
       <!-- Error state (shown on parse failure) -->
-      <div class="parse-err" id="parseErr">
+      <div class="parse-err" id="parseErr" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="perr-icon">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
         </div>
@@ -1256,9 +1276,9 @@ tbody tr.pkg-row:hover { background: #FEF3C7; }
       <div class="modal-head-icon">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       </div>
-      <div class="modal-title">确认提交采购单</div>
-      <button class="modal-cls" onclick="closeModal()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <div class="modal-title" id="modalTitleId">确认提交采购单</div>
+      <button class="modal-cls" onclick="closeModal()" aria-label="关闭对话框">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <div class="modal-body">
@@ -1312,8 +1332,8 @@ tbody tr.pkg-row:hover { background: #FEF3C7; }
 </div>
 
 <!-- Toast -->
-<div class="toast" id="toastEl">
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+<div class="toast" id="toastEl" role="status" aria-live="polite" aria-atomic="true">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
   <span id="toastMsg"></span>
 </div>
 
@@ -1645,7 +1665,10 @@ function rmRow(btn) {
 function saveDraft()    { toast('草稿已保存'); }
 function switchManual() { toast('跳转至手动建单页面…'); }
 
+let _modalTrigger = null; // track trigger for focus restore
+
 function submitOrder() {
+  _modalTrigger = document.activeElement;
   // Show/hide price warning based on scenario
   const hasWarn = demoScene === 'warn-price';
   document.getElementById('modalWarnBox').style.display = hasWarn ? 'flex' : 'none';
@@ -1654,13 +1677,43 @@ function submitOrder() {
   const amtCell   = document.getElementById('modalSkuAmt');
   if (priceCell) priceCell.style.color   = hasWarn ? 'var(--amber)' : '';
   if (amtCell)   amtCell.style.color     = hasWarn ? 'var(--amber)' : '';
-  // Open modal
-  document.getElementById('confirmModal').classList.add('on');
+  // Open modal + move focus to first focusable element
+  const modal = document.getElementById('confirmModal');
+  modal.classList.add('on');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-labelledby', 'modalTitleId');
+  requestAnimationFrame(() => {
+    const first = modal.querySelector('button, [tabindex]:not([tabindex="-1"])');
+    if (first) first.focus();
+  });
+  // Trap focus inside modal
+  modal.addEventListener('keydown', trapFocus);
 }
 
 function closeModal() {
-  document.getElementById('confirmModal').classList.remove('on');
+  const modal = document.getElementById('confirmModal');
+  modal.classList.remove('on');
+  modal.removeEventListener('keydown', trapFocus);
+  // Restore focus to trigger button
+  if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
 }
+
+function trapFocus(e) {
+  if (e.key !== 'Tab') return;
+  const modal = document.getElementById('confirmModal');
+  const focusable = [...modal.querySelectorAll('button:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+    e.preventDefault();
+    (e.shiftKey ? last : first).focus();
+  }
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('confirmModal').classList.contains('on')) closeModal();
+});
 
 function confirmSubmit() {
   const btn = document.getElementById('confirmBtn');
