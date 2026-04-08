@@ -731,9 +731,9 @@ tbody tr.pkg-row:hover { background: #FEF3C7; }
   z-index: 100;
   box-shadow: 0 -4px 16px rgba(0,0,0,.07);
 }
-.foot-meta { font-size: 12px; color: var(--t3); }
+.foot-meta { font-size: 12px; color: var(--t3); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .foot-meta strong { color: var(--t2); font-weight: 500; }
-.foot-actions { margin-left: auto; display: flex; gap: 8px; }
+.foot-actions { flex-shrink: 0; display: flex; gap: 8px; margin-left: 16px; }
 
 /* ── Toast ── */
 .toast {
