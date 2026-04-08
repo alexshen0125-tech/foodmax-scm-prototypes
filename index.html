@@ -1454,10 +1454,11 @@ table { border-collapse: collapse; width: 100%; }
               <th style="width:36px">#</th>
               <th>商品编码</th>
               <th>商品名称</th>
-              <th>采购数量</th>
-              <th>含税单价</th>
-              <th>含税金额</th>
-              <th>来源</th>
+              <th style="text-align:right">成本均价(含税)</th>
+              <th style="text-align:right">采购单价(含税)</th>
+              <th style="text-align:right">采购数量</th>
+              <th style="text-align:right">采购金额(含税)</th>
+              <th>置信度</th>
               <th style="width:48px">操作</th>
             </tr>
           </thead>
@@ -1580,8 +1581,8 @@ table { border-collapse: collapse; width: 100%; }
               <tr>
                 <th>商品编码</th>
                 <th>商品名称</th>
-                <th style="text-align:right">商品单价</th>
-                <th style="text-align:right">商品数量</th>
+                <th style="text-align:right">采购单价(含税)</th>
+                <th style="text-align:right">采购数量</th>
               </tr>
             </thead>
             <tbody id="modalTableBody">
@@ -1633,17 +1634,17 @@ const SCENES = {
   ok: {
     failAt: -1,
     rows: [
-      { sku:'SKU-1024', name:'挪威三文鱼（整条）', qty:80, price:45.00, badge:'ai', conf:96, warn:false },
-      { sku:'SKU-2031', name:'北极甜虾（冻虾仁）', qty:60, price:32.00, badge:'ai', conf:93, warn:false },
-      { sku:'SKU-3087', name:'银鳕鱼（去皮切块）', qty:40, price:88.00, badge:'pending', conf:0, warn:true }
+      { sku:'SKU-1024', name:'挪威三文鱼（整条）', qty:80, price:45.00, costPrice:44.00, badge:'ai', conf:96, warn:false },
+      { sku:'SKU-2031', name:'北极甜虾（冻虾仁）', qty:60, price:32.00, costPrice:31.50, badge:'ai', conf:93, warn:false },
+      { sku:'SKU-3087', name:'银鳕鱼（去皮切块）', qty:40, price:88.00, costPrice:74.00, badge:'pending', conf:0, warn:true }
     ]
   },
   'warn-price': {
     failAt: -1,
     rows: [
-      { sku:'SKU-1024', name:'挪威三文鱼（整条）', qty:80, price:45.00, badge:'ai', conf:96, warn:false },
-      { sku:'SKU-2031', name:'北极甜虾（冻虾仁）', qty:60, price:32.00, badge:'ai', conf:93, warn:false },
-      { sku:'SKU-3087', name:'银鳕鱼（去皮切块）', qty:40, price:88.00, badge:'pending', conf:0, warn:true }
+      { sku:'SKU-1024', name:'挪威三文鱼（整条）', qty:80, price:45.00, costPrice:44.00, badge:'ai', conf:96, warn:false },
+      { sku:'SKU-2031', name:'北极甜虾（冻虾仁）', qty:60, price:32.00, costPrice:31.50, badge:'ai', conf:93, warn:false },
+      { sku:'SKU-3087', name:'银鳕鱼（去皮切块）', qty:40, price:88.00, costPrice:74.00, badge:'pending', conf:0, warn:true }
     ]
   },
   'err-vendor': {
@@ -1659,12 +1660,15 @@ const SCENES = {
 };
 
 const INFO_FIELDS = [
-  { key:'vendor',    label:'供应商',      value:'BIG SAILING INTERNATIONAL PTE. LTD.', badge:'ai',   conf:96 },
-  { key:'warehouse', label:'入库仓库',    value:'新加坡 KR 仓',                         badge:'ai',   conf:91 },
-  { key:'date',      label:'期望到货时间', value:'2026-04-12',                           badge:'ai',   conf:88 },
-  { key:'type',      label:'采购类型',    value:'正常采购单',                            badge:'ai',   conf:82 },
-  { key:'payment',   label:'支付方式',    value:'月结 30 天',                           badge:'master', conf:0, note:'自动填充自供应商主数据' },
-  { key:'entity',    label:'结算主体',    value:'Foodmax Singapore Pte. Ltd.',          badge:'master', conf:0, note:'自动填充自组织架构' }
+  { key:'vendor',    label:'供应商',        value:'BIG SAILING INTERNATIONAL PTE. LTD.', badge:'ai',     conf:96 },
+  { key:'warehouse', label:'入库仓库',      value:'新加坡 KR 仓',                         badge:'ai',     conf:91 },
+  { key:'date',      label:'期望到货时间',  value:'2026-04-12',                           badge:'ai',     conf:88 },
+  { key:'type',      label:'采购单类型',    value:'正常采购单',                            badge:'ai',     conf:82 },
+  { key:'payment',   label:'支付方式',      value:'月结 30 天',                           badge:'master', conf:0, note:'自动填充自供应商主数据' },
+  { key:'entity',    label:'结算主体',      value:'Foodmax Singapore Pte. Ltd.',          badge:'master', conf:0, note:'自动填充自组织架构' },
+  { key:'logistics', label:'是否均摊物流费', value:'否',                                   badge:'history', conf:0, note:'引用上次同供应商设置' },
+  { key:'pricing',   label:'定价方式',      value:'含税单价',                              badge:'master', conf:0, note:'自动填充自供应商主数据' },
+  { key:'prepay',    label:'是否预付单',    value:'否',                                   badge:'master', conf:0, note:'自动填充自供应商主数据' }
 ];
 
 /* ─── Step Indicator ────────────────────────────────────────────────── */
@@ -1951,14 +1955,16 @@ function appendProductRow(tbody, r, idx) {
 
   let priceTd = '';
   if (r.warn) {
+    const pct = r.costPrice ? (((r.price - r.costPrice) / r.costPrice) * 100).toFixed(1) : null;
+    const sign = pct > 0 ? '+' : '';
     priceTd = `<td class="td-num price-warn">
       <div class="price-warn-val">$${r.price.toFixed(2)}</div>
-      <div class="price-warn-note">档案价$74, +18.9%</div>
+      ${pct !== null ? `<div class="price-warn-note">档案价$${r.costPrice.toFixed(2)}, ${sign}${pct}%</div>` : ''}
     </td>`;
   } else {
     priceTd = `<td class="td-num td-editable">
       <input type="number" value="${r.price.toFixed(2)}" step="0.01" min="0"
-        aria-label="${r.name}单价"
+        aria-label="${r.name}采购单价(含税)"
         onchange="calcRow(this)" oninput="calcRow(this)">
     </td>`;
   }
@@ -1971,19 +1977,21 @@ function appendProductRow(tbody, r, idx) {
     badgeHtml = `<span class="info-card-badge badge-amber" style="position:static;display:inline-block">待确认</span>`;
   }
 
+  const costDisplay = r.costPrice != null ? `$${r.costPrice.toFixed(2)}` : '—';
   const amount = (r.qty * r.price).toFixed(2);
 
   tr.innerHTML = `
     <td style="color:var(--text-muted);font-size:12px">${idx}</td>
     <td><span class="sku-code">${escHtml(r.sku)}</span></td>
     <td><span class="product-name">${escHtml(r.name)}</span></td>
+    <td class="td-num" style="color:var(--text-sub)">${costDisplay}</td>
+    ${priceTd}
     <td class="td-num td-editable">
       <input type="number" value="${r.qty}" step="1" min="0"
-        aria-label="${r.name}数量"
+        aria-label="${r.name}采购数量"
         onchange="calcRow(this)" oninput="calcRow(this)">
       <span style="font-size:11px;color:var(--text-muted);margin-left:4px">箱</span>
     </td>
-    ${priceTd}
     <td class="td-num td-amount row-amount">$${amount}</td>
     <td>${badgeHtml}</td>
     <td>
@@ -2013,14 +2021,15 @@ function calcRow(el) {
       else price = parseFloat(inp.value) || 0;
     });
   }
-  // Re-read robustly
+  // Re-read robustly: col order is costPrice(readonly), price(editable/warn), qty(editable)
   const allInp = Array.from(tr.querySelectorAll('td.td-editable input'));
   if (allInp.length >= 2) {
-    qty   = parseFloat(allInp[0].value) || 0;
-    price = parseFloat(allInp[1].value) || 0;
+    // first editable = price, second = qty  (costPrice td has no input)
+    price = parseFloat(allInp[0].value) || 0;
+    qty   = parseFloat(allInp[1].value) || 0;
   } else if (allInp.length === 1) {
+    // warn-price row: only qty is editable
     qty = parseFloat(allInp[0].value) || 0;
-    // price from warn row
     const priceWarnEl = tr.querySelector('.price-warn-val');
     if (priceWarnEl) price = parseFloat(priceWarnEl.textContent.replace('$','')) || 0;
   }
@@ -2046,7 +2055,7 @@ function calcStats() {
 function addRow() {
   rowCounter++;
   const tbody = document.getElementById('productTbody');
-  const newRow = { sku:'SKU-NEW', name:'请输入商品名称', qty:1, price:0, badge:'', conf:0, warn:false };
+  const newRow = { sku:'SKU-NEW', name:'请输入商品名称', qty:1, price:0, costPrice:null, badge:'', conf:0, warn:false };
   appendProductRow(tbody, newRow, tbody.rows.length + 1);
   // focus the name input of new row
   const lastRow = tbody.rows[tbody.rows.length - 1];
