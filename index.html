@@ -424,8 +424,7 @@ body {
 .modal-tbl th { text-align: left; font-size: 10.5px; color: var(--t3); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--bdr); }
 .modal-tbl td { padding: 7px 8px; border-bottom: 1px solid var(--bdr); color: var(--t2); }
 .modal-tbl tfoot td { font-weight: 700; color: var(--navy); background: var(--mut); border-bottom: none; }
-.modal-tbl th:not(:first-child),.modal-tbl td:not(:first-child) { text-align: right; }
-.modal-tbl th:nth-child(2),.modal-tbl td:nth-child(2) { text-align: center; }
+.modal-tbl th:nth-child(n+3),.modal-tbl td:nth-child(n+3) { text-align: right; }
 .modal-warn { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 10px 14px; display: flex; gap: 10px; margin-bottom: 14px; }
 .modal-warn-ico { flex-shrink: 0; color: var(--amber); padding-top: 1px; }
 .modal-warn-txt { font-size: 12px; color: #78350F; line-height: 1.65; }
@@ -1285,13 +1284,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       <!-- Key info -->
       <div class="modal-sec">
         <div class="modal-sec-title">核心信息</div>
-        <div class="modal-kv">
+        <div class="modal-kv" style="grid-template-columns:1fr 1fr 1fr">
           <div class="modal-kv-item"><div class="modal-kv-lbl">供应商</div><div class="modal-kv-val">BIG SAILING INTERNATIONAL PTE.</div></div>
           <div class="modal-kv-item"><div class="modal-kv-lbl">入库仓库</div><div class="modal-kv-val">新加坡 KR 仓</div></div>
           <div class="modal-kv-item"><div class="modal-kv-lbl">期望到货时间</div><div class="modal-kv-val">2026-04-12</div></div>
-          <div class="modal-kv-item"><div class="modal-kv-lbl">支付方式</div><div class="modal-kv-val">月结 30 天</div></div>
-          <div class="modal-kv-item"><div class="modal-kv-lbl">结算主体</div><div class="modal-kv-val">Foodmax Singapore Pte.</div></div>
-          <div class="modal-kv-item"><div class="modal-kv-lbl">采购类型</div><div class="modal-kv-val">正常采购单</div></div>
         </div>
       </div>
       <!-- Price warning (shown for warn-price scene) -->
@@ -1308,16 +1304,13 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         <div class="modal-sec-title">商品明细</div>
         <table class="modal-tbl">
           <thead>
-            <tr><th>商品名称</th><th>规格</th><th>数量</th><th>含税单价</th><th>含税金额</th></tr>
+            <tr><th>商品编码</th><th style="text-align:left">商品名称</th><th>数量</th><th>含税单价</th></tr>
           </thead>
           <tbody>
-            <tr><td>挪威三文鱼（整条）</td><td style="text-align:center">箱</td><td>80</td><td>$45.00</td><td>$3,600.00</td></tr>
-            <tr><td>北极甜虾（冻虾仁）</td><td style="text-align:center">箱</td><td>60</td><td>$32.00</td><td>$1,920.00</td></tr>
-            <tr id="modalSkuRow3"><td>银鳕鱼（去皮切块）</td><td style="text-align:center">箱</td><td>40</td><td id="modalSkuPrice">$88.00</td><td id="modalSkuAmt">$3,520.00</td></tr>
+            <tr><td>SKU-1024</td><td style="text-align:left">挪威三文鱼（整条）</td><td>80</td><td>$45.00</td></tr>
+            <tr><td>SKU-2031</td><td style="text-align:left">北极甜虾（冻虾仁）</td><td>60</td><td>$32.00</td></tr>
+            <tr id="modalSkuRow3"><td>SKU-3087</td><td style="text-align:left">银鳕鱼（去皮切块）</td><td>40</td><td id="modalSkuPrice">$88.00</td></tr>
           </tbody>
-          <tfoot>
-            <tr><td colspan="4" style="text-align:right">含税商品金额合计</td><td id="modalTotal">$9,040.00</td></tr>
-          </tfoot>
         </table>
       </div>
     </div>
@@ -1535,7 +1528,8 @@ function startParse() {
         showPhase('s3');
         document.getElementById('footMeta').innerHTML = '步骤 <strong>2 / 2</strong> — 核对并编辑草稿';
         document.getElementById('footActs').innerHTML = `
-          <button class="btn btn-ghost" onclick="saveDraft()">存为草稿</button>
+          <button class="btn btn-ghost" onclick="saveDraft()">保存草稿</button>
+          <button class="btn btn-ghost" onclick="savePending()">存为待下单</button>
           <button class="btn btn-primary" onclick="submitOrder()">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             保存并提交
@@ -1663,6 +1657,7 @@ function rmRow(btn) {
 
 // ─── Actions ─────────────────────────────────────────────────
 function saveDraft()    { toast('草稿已保存'); }
+function savePending()  { toast('已保存为待下单，可在采购单列表中继续处理'); }
 function switchManual() { toast('跳转至手动建单页面…'); }
 
 let _modalTrigger = null; // track trigger for focus restore
@@ -1674,9 +1669,7 @@ function submitOrder() {
   document.getElementById('modalWarnBox').style.display = hasWarn ? 'flex' : 'none';
   // Price warning: highlight row
   const priceCell = document.getElementById('modalSkuPrice');
-  const amtCell   = document.getElementById('modalSkuAmt');
-  if (priceCell) priceCell.style.color   = hasWarn ? 'var(--amber)' : '';
-  if (amtCell)   amtCell.style.color     = hasWarn ? 'var(--amber)' : '';
+  if (priceCell) priceCell.style.color = hasWarn ? 'var(--amber)' : '';
   // Open modal + move focus to first focusable element
   const modal = document.getElementById('confirmModal');
   modal.classList.add('on');
